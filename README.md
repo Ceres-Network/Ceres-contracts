@@ -117,11 +117,8 @@ const policyId = await client.registerPolicy(farmer, {
   farmer: farmer.publicKey(),
   farmGeohash: '9q5ct',
   cropType: 'maize',
-  seasonStart: BigInt(Date.now() / 1000),
-  seasonEnd: BigInt(Date.now() / 1000 + 90 * 24 * 60 * 60),
   coverageAmount: BigInt(5_000_0000000), // 5,000 USDC
   rainfallThreshold: 200, // 200mm
-  ndviBaseline: 7000, // 0.7
 });
 
 // Evaluate policy for payout
@@ -143,71 +140,43 @@ await client.evaluatePolicy(farmer, policyId);
 
 *Not yet deployed*
 
-## 🛰️ How Oracles Work
+## 🛰️ How Oracles Work 
 
-### Data Sources
+### Current Implementation
 
-Oracle nodes aggregate data from:
-- **Rainfall**: Weather station APIs, satellite data (CHIRPS, GPM)
-- **NDVI**: Sentinel-2, Landsat satellite imagery
-- **Soil Moisture**: SMAP, SMOS satellite missions
+- Oracle nodes can submit readings without authentication
+- Only the **latest reading** is stored (no history)
+- No median aggregation (just returns most recent value)
+- No signature verification
+- No whitelist enforcement
 
-### Submission Flow
+### Intended Design
 
-1. Oracle nodes fetch data for registered farm locations (geohash cells)
-2. Nodes sign readings with their private keys
-3. Readings submitted to Oracle Contract via `submit_reading()`
-4. Contract validates:
-   - Oracle is whitelisted
-   - Reading is < 48 hours old
-   - Signature is valid
-
-### Aggregation
-
-- Contract stores all readings with timestamps
-- `aggregate_readings()` calculates **median** of readings within season window
-- Median prevents single malicious oracle from manipulating payouts
-- Aggregated value used by Trigger Contract for evaluation
+The full implementation will include:
+- **Data Sources**: Weather station APIs, satellite data (CHIRPS, GPM, Sentinel-2)
+- **Whitelist**: Only approved oracle nodes can submit
+- **Signatures**: Cryptographic verification of readings
+- **Aggregation**: Median of multiple readings to prevent manipulation
+- **History**: Time-series data for seasonal analysis
 
 ## 💰 How Payouts Are Triggered
 
-### Trigger Conditions
+### Current Implementation
 
-Anyone can call `evaluate_policy(policy_id)` to check if a policy should pay out:
+- Accepts simulated rainfall and threshold values
+- Stores trigger events but **doesn't release actual payouts**
+- No cross-contract calls to policy or pool contracts
+- No oracle data integration
 
-1. **Drought (100% payout)**
-   - Season rainfall < policy.rainfall_threshold
-   - Example: 150mm recorded, 200mm threshold → full payout
+### Intended Design
 
-2. **Crop Stress (50% payout)**
-   - NDVI < 70% of policy.ndvi_baseline
-   - Example: NDVI 0.45, baseline 0.70 → partial payout
-
-### Example Thresholds
-
-| Crop | Region | Rainfall Threshold | NDVI Baseline |
-|------|--------|-------------------|---------------|
-| Maize | East Africa | 200mm/season | 0.70 |
-| Wheat | South Asia | 180mm/season | 0.65 |
-| Sorghum | West Africa | 220mm/season | 0.68 |
-
-### Payout Process
-
-```
-evaluate_policy(policy_id)
-  ↓
-Check oracle data for farm location
-  ↓
-Compare against policy thresholds
-  ↓
-Calculate payout amount (0%, 50%, or 100%)
-  ↓
-Call pool.release_payout(farmer, amount)
-  ↓
-Update policy state to Triggered
-  ↓
-Emit PayoutTriggered event
-```
+The full implementation will:
+1. Fetch policy details from policy contract
+2. Get aggregated oracle data for farm location
+3. Evaluate drought/crop stress conditions
+4. Calculate payout amount (0%, 50%, or 100%)
+5. Call pool contract to release funds to farmer
+6. Update policy state to Triggered
 
 ## 🔧 Development
 
@@ -273,10 +242,9 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 ## 🔐 Security
 
 - All contracts use typed errors (no raw `u32` codes)
-- No `unwrap()` in production paths
-- Storage keys use `Symbol` types
+- Storage keys use typed enums
 - Collateral ratio enforcement prevents pool insolvency
-- Median aggregation resists oracle manipulation
+- Oracle data validation
 
 **Security audits**: Not yet audited. Use at your own risk.
 
@@ -303,3 +271,4 @@ Built with:
 ---
 
 **Ceres Network** - Bringing crop insurance to the uninsured 🌾
+

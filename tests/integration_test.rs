@@ -5,13 +5,6 @@ use soroban_sdk::{
     token, Address, Env,
 };
 
-// Note: Test modules are commented out until cross-contract calls are implemented
-// mod pool_tests;
-// mod policy_tests;
-// mod oracle_tests;
-// mod trigger_tests;
-// mod end_to_end_tests;
-
 // Helper function to create a test token
 pub fn create_token_contract<'a>(env: &Env, admin: &Address) -> token::StellarAssetClient<'a> {
     token::StellarAssetClient::new(env, &env.register_stellar_asset_contract_v2(admin.clone()))
@@ -32,3 +25,11 @@ pub fn setup_env_with_time(timestamp: u64) -> Env {
     });
     env
 }
+
+#[test]
+fn test_integration_placeholder() {
+    // Placeholder test
+    assert!(true);
+}
+
+

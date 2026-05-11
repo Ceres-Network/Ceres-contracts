@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String, Symbol};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
 
 #[derive(Clone)]
 #[contracttype]
@@ -8,7 +8,6 @@ pub struct TriggerEvent {
     pub policy_id: u64,
     pub triggered_at: u64,
     pub rainfall_value: u32,
-    pub ndvi_value: u32,
     pub payout_amount: i128,
     pub trigger_reason: String,
 }
@@ -32,13 +31,8 @@ pub struct Config {
 pub enum Error {
     AlreadyInitialized = 1,
     NotInitialized = 2,
-    PolicyNotFound = 3,
-    PolicyNotActive = 4,
-    AlreadyTriggered = 5,
-    SeasonEnded = 6,
-    OracleDataUnavailable = 7,
-    ThresholdNotMet = 8,
-    PayoutFailed = 9,
+    AlreadyTriggered = 3,
+    ThresholdNotMet = 4,
 }
 
 #[contract]
@@ -70,9 +64,14 @@ impl TriggerContract {
         Ok(())
     }
 
-    /// Evaluate a policy against oracle data and trigger payout if conditions are met
-    pub fn evaluate_policy(env: Env, policy_id: u64) -> Result<(), Error> {
-        let config: Config = env
+    /// Evaluate a policy
+    pub fn evaluate_policy(
+        env: Env,
+        policy_id: u64,
+        simulated_rainfall: u32,
+        simulated_threshold: u32,
+    ) -> Result<(), Error> {
+        let _config: Config = env
             .storage()
             .instance()
             .get(&DataKey::Config)
@@ -87,30 +86,28 @@ impl TriggerContract {
             return Err(Error::AlreadyTriggered);
         }
 
-        // Note: Cross-contract calls will be implemented after initial build
-        // For initial compilation, this is a placeholder
         let current_time = env.ledger().timestamp();
-        
-        // Placeholder trigger event for compilation
-        let trigger_event = TriggerEvent {
-            policy_id,
-            triggered_at: current_time,
-            rainfall_value: 0,
-            ndvi_value: 0,
-            payout_amount: 0,
-            trigger_reason: String::from_str(&env, "placeholder"),
-        };
 
-        env.storage()
-            .persistent()
-            .set(&DataKey::Triggered(policy_id), &trigger_event);
+        // Simple evaluation: if rainfall < threshold, trigger payout
+        if simulated_rainfall < simulated_threshold {
+            let payout_amount = 5_000_0000000i128; // Hardcoded 5000 USDC for demo
 
-        env.events().publish(
-            (Symbol::new(&env, "payout_triggered"),),
-            policy_id,
-        );
+            let trigger_event = TriggerEvent {
+                policy_id,
+                triggered_at: current_time,
+                rainfall_value: simulated_rainfall,
+                payout_amount,
+                trigger_reason: String::from_str(&env, "drought_detected"),
+            };
 
-        Ok(())
+            env.storage()
+                .persistent()
+                .set(&DataKey::Triggered(policy_id), &trigger_event);
+
+            Ok(())
+        } else {
+            Err(Error::ThresholdNotMet)
+        }
     }
 
     /// Get trigger event details for a policy
@@ -118,7 +115,7 @@ impl TriggerContract {
         env.storage()
             .persistent()
             .get(&DataKey::Triggered(policy_id))
-            .ok_or(Error::PolicyNotFound)
+            .ok_or(Error::NotInitialized)
     }
 
     /// Check if a policy has been triggered
@@ -128,6 +125,3 @@ impl TriggerContract {
             .has(&DataKey::Triggered(policy_id))
     }
 }
-
-// Note: Cross-contract imports will be added after initial build
-// For initial compilation, cross-contract calls are commented out

@@ -1,7 +1,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, Address, Env, String, Symbol, Vec,
+    contract, contractimpl, contracttype, Address, Env, String, Vec,
 };
 
 #[derive(Clone, PartialEq)]
@@ -46,12 +46,8 @@ pub struct Config {
 pub enum Error {
     AlreadyInitialized = 1,
     NotInitialized = 2,
-    Unauthorized = 3,
-    InvalidTimeRange = 4,
-    InvalidAmount = 5,
-    PolicyNotFound = 6,
-    PolicyNotActive = 7,
-    PoolLockFailed = 8,
+    InvalidAmount = 3,
+    PolicyNotFound = 4,
 }
 
 #[contract]
@@ -82,23 +78,16 @@ impl PolicyContract {
         farmer: Address,
         farm_geohash: String,
         crop_type: String,
-        season_start: u64,
-        season_end: u64,
         coverage_amount: i128,
         rainfall_threshold: u32,
-        ndvi_baseline: u32,
     ) -> Result<u64, Error> {
         farmer.require_auth();
-
-        if season_end <= season_start {
-            return Err(Error::InvalidTimeRange);
-        }
 
         if coverage_amount <= 0 {
             return Err(Error::InvalidAmount);
         }
 
-        let config: Config = env
+        let _config: Config = env
             .storage()
             .instance()
             .get(&DataKey::Config)
@@ -110,23 +99,21 @@ impl PolicyContract {
             .get(&DataKey::NextPolicyId)
             .unwrap_or(1);
 
+        let current_time = env.ledger().timestamp();
+
         // Create policy
         let policy = Policy {
             policy_id,
             farmer: farmer.clone(),
             farm_geohash: farm_geohash.clone(),
             crop_type,
-            season_start,
-            season_end,
+            season_start: current_time,
+            season_end: current_time + (90 * 24 * 60 * 60), // 90 days
             coverage_amount,
             rainfall_threshold,
-            ndvi_baseline,
+            ndvi_baseline: 0,
             state: PolicyState::Active,
         };
-
-        // Lock coverage in pool - cross-contract call
-        // Note: In production, use contractimport! after initial build
-        // For now, we'll skip the actual call to allow compilation
 
         // Store policy
         env.storage()
@@ -148,11 +135,6 @@ impl PolicyContract {
             .instance()
             .set(&DataKey::NextPolicyId, &(policy_id + 1));
 
-        env.events().publish(
-            (Symbol::new(&env, "policy_registered"), farmer),
-            (policy_id, farm_geohash, coverage_amount),
-        );
-
         Ok(policy_id)
     }
 
@@ -173,48 +155,17 @@ impl PolicyContract {
             .unwrap_or(Vec::new(&env))
     }
 
-    /// Mark policy as expired if season has passed without trigger
-    pub fn expire_policy(env: Env, policy_id: u64) -> Result<(), Error> {
-        let mut policy: Policy = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Policy(policy_id))
-            .ok_or(Error::PolicyNotFound)?;
-
-        if policy.state != PolicyState::Active {
-            return Err(Error::PolicyNotActive);
-        }
-
-        let current_time = env.ledger().timestamp();
-        if current_time <= policy.season_end {
-            return Err(Error::InvalidTimeRange);
-        }
-
-        policy.state = PolicyState::Expired;
-        env.storage()
-            .persistent()
-            .set(&DataKey::Policy(policy_id), &policy);
-
-        env.events()
-            .publish((Symbol::new(&env, "policy_expired"),), policy_id);
-
-        Ok(())
-    }
-
-    /// Update policy state (called by trigger contract)
+    /// Update policy state
     pub fn update_policy_state(
         env: Env,
         policy_id: u64,
         new_state: PolicyState,
     ) -> Result<(), Error> {
-        let config: Config = env
+        let _config: Config = env
             .storage()
             .instance()
             .get(&DataKey::Config)
             .ok_or(Error::NotInitialized)?;
-
-        // Only allow trigger contract or admin to update state
-        let caller = env.current_contract_address();
 
         let mut policy: Policy = env
             .storage()
@@ -230,6 +181,3 @@ impl PolicyContract {
         Ok(())
     }
 }
-
-// Note: Cross-contract imports will be added after initial build
-// For initial compilation, cross-contract calls are commented out

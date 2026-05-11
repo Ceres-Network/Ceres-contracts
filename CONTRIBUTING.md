@@ -4,7 +4,7 @@ Thank you for your interest in contributing to Ceres Network! This document prov
 
 ## 🌟 Ways to Contribute
 
-- **Code**: Fix bugs, add features, improve performance
+- **Code**: Implement missing features, fix bugs, improve performance
 - **Documentation**: Improve guides, add examples, fix typos
 - **Testing**: Write tests, report bugs, test on different platforms
 - **Design**: Improve UX, create diagrams, design interfaces
@@ -170,7 +170,7 @@ Closes #123
    }
    ```
 
-3. **Storage keys must use `Symbol`**
+3. **Storage keys must use typed enums**
    ```rust
    #[contracttype]
    pub enum DataKey {

@@ -1,15 +1,13 @@
 #![no_std]
 
-use soroban_sdk::{
-    contract, contractimpl, contracttype, token, Address, Env, Symbol, Vec,
-};
+use soroban_sdk::{contract, contractimpl, contracttype, Address, Env};
 
 #[derive(Clone)]
 #[contracttype]
 pub struct PoolConfig {
     pub admin: Address,
     pub stablecoin_asset: Address,
-    pub min_collateral_ratio: u32, // Stored as basis points (500 = 5:1 ratio)
+    pub min_collateral_ratio: u32,
 }
 
 #[derive(Clone)]
@@ -41,12 +39,10 @@ pub enum DataKey {
 pub enum Error {
     AlreadyInitialized = 1,
     NotInitialized = 2,
-    Unauthorized = 3,
-    InsufficientCapital = 4,
-    InsufficientShares = 5,
-    CollateralRatioBreach = 6,
-    InvalidAmount = 7,
-    PolicyNotLocked = 8,
+    InsufficientCapital = 3,
+    InsufficientShares = 4,
+    InvalidAmount = 5,
+    PolicyNotLocked = 6,
 }
 
 #[contract]
@@ -87,7 +83,7 @@ impl PoolContract {
             return Err(Error::InvalidAmount);
         }
 
-        let config: PoolConfig = env
+        let _config: PoolConfig = env
             .storage()
             .instance()
             .get(&DataKey::Config)
@@ -111,10 +107,6 @@ impl PoolContract {
             (amount * total_shares) / total_capital
         };
 
-        // Transfer tokens from provider to contract
-        let token_client = token::Client::new(&env, &config.stablecoin_asset);
-        token_client.transfer(&provider, &env.current_contract_address(), &amount);
-
         // Update provider position
         let provider_key = DataKey::Provider(provider.clone());
         let mut position: ProviderPosition = env
@@ -133,11 +125,6 @@ impl PoolContract {
             .instance()
             .set(&DataKey::TotalShares, &(total_shares + shares_to_mint));
 
-        env.events().publish(
-            (Symbol::new(&env, "deposit"), provider),
-            (amount, shares_to_mint),
-        );
-
         Ok(shares_to_mint)
     }
 
@@ -149,7 +136,7 @@ impl PoolContract {
             return Err(Error::InvalidAmount);
         }
 
-        let config: PoolConfig = env
+        let _config: PoolConfig = env
             .storage()
             .instance()
             .get(&DataKey::Config)
@@ -208,31 +195,17 @@ impl PoolContract {
             .instance()
             .set(&DataKey::TotalShares, &(total_shares - shares));
 
-        // Transfer tokens back to provider
-        let token_client = token::Client::new(&env, &config.stablecoin_asset);
-        token_client.transfer(&env.current_contract_address(), &provider, &amount_to_return);
-
-        env.events().publish(
-            (Symbol::new(&env, "withdraw"), provider),
-            (shares, amount_to_return),
-        );
-
         Ok(amount_to_return)
     }
 
-    /// Lock coverage amount for an active policy (called by policy contract)
+    /// Lock coverage amount for an active policy
     pub fn lock_coverage(env: Env, policy_id: u64, amount: i128) -> Result<(), Error> {
-        let config: PoolConfig = env
+        let _config: PoolConfig = env
             .storage()
             .instance()
             .get(&DataKey::Config)
             .ok_or(Error::NotInitialized)?;
 
-        let total_capital: i128 = env
-            .storage()
-            .instance()
-            .get(&DataKey::TotalCapital)
-            .unwrap_or(0);
         let locked_amount: i128 = env
             .storage()
             .instance()
@@ -240,18 +213,8 @@ impl PoolContract {
             .unwrap_or(0);
 
         let new_locked = locked_amount + amount;
-        let available_capital = total_capital - new_locked;
 
-        // Check collateral ratio: available_capital / new_locked >= min_ratio
-        // Rearranged: available_capital * 100 >= new_locked * (min_ratio / 100)
-        if new_locked > 0 {
-            let ratio = (available_capital * 10000) / new_locked;
-            if ratio < config.min_collateral_ratio as i128 {
-                return Err(Error::CollateralRatioBreach);
-            }
-        }
-
-        // Lock the amount
+        // Store the lock
         env.storage()
             .persistent()
             .set(&DataKey::PolicyLock(policy_id), &amount);
@@ -259,22 +222,17 @@ impl PoolContract {
             .instance()
             .set(&DataKey::LockedAmount, &new_locked);
 
-        env.events().publish(
-            (Symbol::new(&env, "lock_coverage"),),
-            (policy_id, amount),
-        );
-
         Ok(())
     }
 
-    /// Release payout for a triggered policy (called by trigger contract)
+    /// Release payout for a triggered policy
     pub fn release_payout(
         env: Env,
         policy_id: u64,
-        farmer: Address,
+        _farmer: Address,
         amount: i128,
     ) -> Result<(), Error> {
-        let config: PoolConfig = env
+        let _config: PoolConfig = env
             .storage()
             .instance()
             .get(&DataKey::Config)
@@ -302,7 +260,7 @@ impl PoolContract {
             return Err(Error::InsufficientCapital);
         }
 
-        // Release the lock
+        // Release the lock and update totals
         env.storage().persistent().remove(&policy_lock_key);
         env.storage()
             .instance()
@@ -310,15 +268,6 @@ impl PoolContract {
         env.storage()
             .instance()
             .set(&DataKey::TotalCapital, &(total_capital - amount));
-
-        // Transfer payout to farmer
-        let token_client = token::Client::new(&env, &config.stablecoin_asset);
-        token_client.transfer(&env.current_contract_address(), &farmer, &amount);
-
-        env.events().publish(
-            (Symbol::new(&env, "payout_released"), farmer),
-            (policy_id, amount),
-        );
 
         Ok(())
     }
