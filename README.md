@@ -1,6 +1,5 @@
 # Ceres Network
 
-[![CI](https://github.com/ceres-network/ceres-network/actions/workflows/ci.yml/badge.svg)](https://github.com/ceres-network/ceres-network/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Decentralized parametric crop insurance for smallholder farmers, built on Stellar with Soroban smart contracts.**
