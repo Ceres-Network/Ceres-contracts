@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, String};
+use soroban_sdk::{contract, contractimpl, contracterror, contracttype, Address, Env, String};
 
 #[derive(Clone)]
 #[contracttype]
@@ -27,7 +27,9 @@ pub struct Config {
     pub pool_contract: Address,
 }
 
-#[contracttype]
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
 pub enum Error {
     AlreadyInitialized = 1,
     NotInitialized = 2,

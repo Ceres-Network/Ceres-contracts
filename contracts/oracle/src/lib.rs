@@ -1,7 +1,7 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, Address, Env, String,
+    contract, contractimpl, contracterror, contracttype, Address, Env, String,
 };
 
 #[derive(Clone, Copy, PartialEq)]
@@ -33,7 +33,9 @@ pub struct Config {
     pub admin: Address,
 }
 
-#[contracttype]
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
 pub enum Error {
     AlreadyInitialized = 1,
     NotInitialized = 2,

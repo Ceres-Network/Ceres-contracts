@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, contracttype, Address, Env};
+use soroban_sdk::{contract, contractimpl, contracterror, contracttype, Address, Env};
 
 #[derive(Clone)]
 #[contracttype]
@@ -35,7 +35,9 @@ pub enum DataKey {
     PolicyLock(u64), // policy_id -> locked amount
 }
 
-#[contracttype]
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
 pub enum Error {
     AlreadyInitialized = 1,
     NotInitialized = 2,

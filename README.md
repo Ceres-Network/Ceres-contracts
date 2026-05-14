@@ -72,8 +72,8 @@ Traditional crop insurance is inaccessible to smallholder farmers due to high co
 
 ```bash
 # Clone repository
-git clone https://github.com/ceres-network/ceres-network.git
-cd ceres-network
+git clone https://github.com/Ceres-Network/Ceres-contracts.git
+cd Ceres-contracts
 
 # Build all contracts
 cargo build --target wasm32-unknown-unknown --release
