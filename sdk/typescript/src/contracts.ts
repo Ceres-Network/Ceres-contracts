@@ -2,13 +2,14 @@ import {
   Contract,
   SorobanRpc,
   TransactionBuilder,
-  Networks,
   BASE_FEE,
   xdr,
   Address,
   nativeToScVal,
   scValToNative,
+  Keypair,
 } from '@stellar/stellar-sdk';
+import { Policy, PoolStats, AggregatedReading } from './types';
 
 export class ContractClient {
   protected contract: Contract;
@@ -38,7 +39,7 @@ export class ContractClient {
   }
 
   protected async submitTransaction(
-    sourceKeypair: any,
+    sourceKeypair: Keypair,
     operation: xdr.Operation
   ): Promise<SorobanRpc.Api.GetTransactionResponse> {
     const account = await this.server.getAccount(sourceKeypair.publicKey());
@@ -56,7 +57,7 @@ export class ContractClient {
       throw new Error(`Simulation failed: ${simulated.error}`);
     }
 
-    const prepared = SorobanRpc.assembleTransaction(transaction, simulated);
+    const prepared = SorobanRpc.assembleTransaction(transaction, simulated).build();
     prepared.sign(sourceKeypair);
 
     const sent = await this.server.sendTransaction(prepared);
@@ -77,7 +78,7 @@ export class ContractClient {
 }
 
 export class PoolContractClient extends ContractClient {
-  async getPoolStats(): Promise<any> {
+  async getPoolStats(): Promise<PoolStats> {
     const operation = this.contract.call('get_pool_stats');
     const result = await this.simulateTransaction(
       'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF',
@@ -91,7 +92,7 @@ export class PoolContractClient extends ContractClient {
     throw new Error('Failed to get pool stats');
   }
 
-  async deposit(sourceKeypair: any, amount: bigint): Promise<bigint> {
+  async deposit(sourceKeypair: Keypair, amount: bigint): Promise<bigint> {
     const operation = this.contract.call(
       'deposit',
       Address.fromString(sourceKeypair.publicKey()).toScVal(),
@@ -108,7 +109,7 @@ export class PoolContractClient extends ContractClient {
     throw new Error('Deposit failed');
   }
 
-  async withdraw(sourceKeypair: any, shares: bigint): Promise<bigint> {
+  async withdraw(sourceKeypair: Keypair, shares: bigint): Promise<bigint> {
     const operation = this.contract.call(
       'withdraw',
       Address.fromString(sourceKeypair.publicKey()).toScVal(),
@@ -128,7 +129,7 @@ export class PoolContractClient extends ContractClient {
 
 export class PolicyContractClient extends ContractClient {
   async registerPolicy(
-    sourceKeypair: any,
+    sourceKeypair: Keypair,
     params: {
       farmer: string;
       farmGeohash: string;
@@ -161,7 +162,7 @@ export class PolicyContractClient extends ContractClient {
     throw new Error('Policy registration failed');
   }
 
-  async getPolicy(policyId: bigint): Promise<any> {
+  async getPolicy(policyId: bigint): Promise<Policy> {
     const operation = this.contract.call(
       'get_policy',
       nativeToScVal(policyId, { type: 'u64' })
@@ -200,7 +201,7 @@ export class PolicyContractClient extends ContractClient {
 
 export class OracleContractClient extends ContractClient {
   async submitReading(
-    sourceKeypair: any,
+    sourceKeypair: Keypair,
     params: {
       geoCell: string;
       readingType: string;
@@ -226,7 +227,7 @@ export class OracleContractClient extends ContractClient {
     }
   }
 
-  async getAggregated(geoCell: string, readingType: string): Promise<any> {
+  async getAggregated(geoCell: string, readingType: string): Promise<AggregatedReading> {
     const operation = this.contract.call(
       'get_aggregated',
       nativeToScVal(geoCell, { type: 'string' }),
@@ -247,7 +248,7 @@ export class OracleContractClient extends ContractClient {
 }
 
 export class TriggerContractClient extends ContractClient {
-  async evaluatePolicy(sourceKeypair: any, policyId: bigint): Promise<void> {
+  async evaluatePolicy(sourceKeypair: Keypair, policyId: bigint): Promise<void> {
     const operation = this.contract.call(
       'evaluate_policy',
       nativeToScVal(policyId, { type: 'u64' })

@@ -1,5 +1,3 @@
-import { Address } from '@stellar/stellar-sdk';
-
 export enum PolicyState {
   Active = 'Active',
   Triggered = 'Triggered',
