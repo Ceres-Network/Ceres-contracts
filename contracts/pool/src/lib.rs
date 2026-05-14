@@ -313,4 +313,18 @@ impl PoolContract {
             .map(|p: ProviderPosition| p.shares)
             .unwrap_or(0)
     }
+
+    /// Get provider's current capital value (shares redeemed at current pool ratio)
+    pub fn get_provider_value(env: Env, provider: Address) -> i128 {
+        let shares = Self::get_provider_shares(env.clone(), provider);
+        if shares == 0 {
+            return 0;
+        }
+        let total_capital: i128 = env.storage().instance().get(&DataKey::TotalCapital).unwrap_or(0);
+        let total_shares: i128 = env.storage().instance().get(&DataKey::TotalShares).unwrap_or(0);
+        if total_shares == 0 {
+            return 0;
+        }
+        (shares * total_capital) / total_shares
+    }
 }
