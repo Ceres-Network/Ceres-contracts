@@ -19,7 +19,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.81.0
+          toolchain: 1.88.0
           profile: minimal
           components: rustfmt
           override: true
@@ -36,7 +36,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.81.0
+          toolchain: 1.88.0
           profile: minimal
           components: clippy
           override: true
@@ -71,7 +71,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.81.0
+          toolchain: 1.88.0
           profile: minimal
           override: true
 
@@ -105,7 +105,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.81.0
+          toolchain: 1.88.0
           profile: minimal
           target: wasm32-unknown-unknown
           override: true

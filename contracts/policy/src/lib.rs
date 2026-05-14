@@ -1,8 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{
-    contract, contractimpl, contracterror, contracttype, Address, Env, String, Vec,
-};
+use soroban_sdk::{contract, contracterror, contractimpl, contracttype, Address, Env, String, Vec};
 
 #[derive(Clone, PartialEq)]
 #[contracttype]
@@ -130,7 +128,9 @@ impl PolicyContract {
             .get(&farmer_key)
             .unwrap_or(Vec::new(&env));
         farmer_policies.push_back(policy_id);
-        env.storage().persistent().set(&farmer_key, &farmer_policies);
+        env.storage()
+            .persistent()
+            .set(&farmer_key, &farmer_policies);
 
         // Increment policy ID counter
         env.storage()
