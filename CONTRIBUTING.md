@@ -23,11 +23,11 @@ Thank you for your interest in contributing to Ceres Network! This document prov
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/ceres-network.git
+git clone https://github.com/YOUR_USERNAME/Ceres-contracts.git
 cd ceres-network
 
 # Add upstream remote
-git remote add upstream https://github.com/ceres-network/ceres-network.git
+git remote add upstream https://github.com/Ceres-Network/Ceres-contracts.git
 
 # Install Rust dependencies
 cargo build
@@ -277,8 +277,6 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 
 - **GitHub Issues**: Bug reports, feature requests
 - **GitHub Discussions**: Questions, ideas, general discussion
-- **Discord**: Real-time chat (link in README)
-- **Twitter**: [@CeresNetwork](https://twitter.com/CeresNetwork)
 
 ## 🎓 Learning Resources
 
